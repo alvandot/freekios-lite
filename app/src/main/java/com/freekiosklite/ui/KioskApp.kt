@@ -40,6 +40,7 @@ import com.freekiosklite.ui.theme.FreeKioskTheme
 fun KioskApp(viewModel: KioskViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val navController = rememberNavController()
+    val context = LocalContext.current
 
     FreeKioskTheme {
         Scaffold { padding ->
@@ -73,7 +74,7 @@ fun KioskApp(viewModel: KioskViewModel) {
 
     state.message?.let { message ->
         LaunchedEffect(message) {
-            Toast.makeText(LocalContext.current, message, Toast.LENGTH_LONG).show()
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             viewModel.clearMessage()
         }
     }
