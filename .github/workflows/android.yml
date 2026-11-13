@@ -53,10 +53,7 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: |
-            platform-tools
-            platforms;android-36
-            build-tools;36.0.0
+          packages: platform-tools platforms;android-36 build-tools;36.0.0
 
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
@@ -100,12 +97,10 @@ jobs:
       - name: Set up Android SDK and emulator image
         uses: android-actions/setup-android@v3
         with:
-          packages: |
-            platform-tools
-            emulator
-            platforms;android-36
-            build-tools;36.0.0
-            system-images;android-35;google_apis;x86_64
+          packages: platform-tools emulator platforms;android-36 build-tools;36.0.0
+
+      - name: Install API 35 emulator image
+        run: sdkmanager "system-images;android-35;google_apis;x86_64"
 
       - name: Run instrumentation tests on disposable emulator
         run: |
@@ -157,12 +152,10 @@ jobs:
       - name: Set up Android SDK and emulator image
         uses: android-actions/setup-android@v3
         with:
-          packages: |
-            platform-tools
-            emulator
-            platforms;android-36
-            build-tools;36.0.0
-            system-images;android-${{ matrix.api-level }};google_apis;x86_64
+          packages: platform-tools emulator platforms;android-36 build-tools;36.0.0
+
+      - name: Install compatibility emulator image
+        run: sdkmanager "system-images;android-${{ matrix.api-level }};google_apis;x86_64"
 
       - name: Run compatibility instrumentation tests
         run: |
@@ -208,12 +201,10 @@ jobs:
       - name: Set up Android SDK and emulator image
         uses: android-actions/setup-android@v3
         with:
-          packages: |
-            platform-tools
-            emulator
-            platforms;android-36
-            build-tools;36.0.0
-            system-images;android-35;google_apis;x86_64
+          packages: platform-tools emulator platforms;android-36 build-tools;36.0.0
+
+      - name: Install API 35 emulator image
+        run: sdkmanager "system-images;android-35;google_apis;x86_64"
 
       - name: Download debug APK
         uses: actions/download-artifact@v4
