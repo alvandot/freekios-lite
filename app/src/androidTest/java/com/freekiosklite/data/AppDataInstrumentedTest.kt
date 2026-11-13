@@ -20,12 +20,12 @@ class AppDataInstrumentedTest {
 
     @Before
     fun clearStoredPackages() {
-        context.dataStoreFile("kiosk_preferences.preferences_pb").delete()
+        context.preferencesDataStoreFile("kiosk_preferences.preferences_pb").delete()
     }
 
     @After
     fun clearAfterTest() {
-        context.dataStoreFile("kiosk_preferences.preferences_pb").delete()
+        context.preferencesDataStoreFile("kiosk_preferences.preferences_pb").delete()
     }
 
     @Test

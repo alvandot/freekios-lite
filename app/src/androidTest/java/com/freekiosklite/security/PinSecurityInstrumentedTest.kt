@@ -20,12 +20,12 @@ class PinSecurityInstrumentedTest {
 
     @Before
     fun clearStoredSecurityState() {
-        context.dataStoreFile("security_preferences.preferences_pb").delete()
+        context.preferencesDataStoreFile("security_preferences.preferences_pb").delete()
     }
 
     @After
     fun clearAfterTest() {
-        context.dataStoreFile("security_preferences.preferences_pb").delete()
+        context.preferencesDataStoreFile("security_preferences.preferences_pb").delete()
     }
 
     @Test
@@ -34,7 +34,7 @@ class PinSecurityInstrumentedTest {
 
         security.configurePin("1234".toCharArray())
 
-        val stored = context.dataStoreFile("security_preferences.preferences_pb").readBytes()
+        val stored = context.preferencesDataStoreFile("security_preferences.preferences_pb").readBytes()
         assertTrue(stored.isNotEmpty())
         assertTrue("1234".toByteArray().none(stored::contains))
         assertEquals(PinVerification.Success, security.verifyPin("1234".toCharArray()))
