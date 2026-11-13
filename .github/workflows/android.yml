@@ -1,4 +1,4 @@
-name: Android APK
+name: Android CI
 
 on:
   push:
@@ -7,15 +7,39 @@ on:
   pull_request:
     branches:
       - main
+  schedule:
+    - cron: "0 3 * * 0"
   workflow_dispatch:
+    inputs:
+      device_owner_probe:
+        description: "Provision a disposable emulator as Device Owner and run the policy probe"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 jobs:
-  build:
+  security-audit:
+    name: Static security audit
     runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
 
+      - name: Check manifest and source security invariants
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          manifest="app/src/main/AndroidManifest.xml"
+          test "$(grep -c '<uses-permission' "$manifest" || true)" -eq 0
+          grep -q 'android:permission="android.permission.BIND_DEVICE_ADMIN"' "$manifest"
+          ! grep -R -n -E '1234|0000|PIN[[:space:]]*=[[:space:]]*"|pin[[:space:]]*=[[:space:]]*"' app/src/main
+
+  gradle:
+    name: Gradle validation and APK
+    runs-on: ubuntu-latest
     steps:
       - name: Check out source
         uses: actions/checkout@v5
@@ -34,11 +58,170 @@ jobs:
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
 
-      - name: Build debug APK
-        run: ./gradlew --no-daemon clean assembleDebug
+      - name: Run unit tests, lint, and build
+        run: ./gradlew --no-daemon clean testDebugUnitTest lintDebug assembleDebug
+
+      - name: Upload unit and lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-reports
+          path: |
+            app/build/reports/tests/
+            app/build/test-results/
+            app/build/reports/lint-results-debug.html
+          if-no-files-found: warn
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: FreeKiosk-Lite-debug
           path: app/build/outputs/apk/debug/app-debug.apk
+
+  instrumentation:
+    name: Instrumentation API 35
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    needs: gradle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK and emulator image
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools emulator platforms;android-36 build-tools;36.0.0 system-images;android-35;google_apis;x86_64
+
+      - name: Run instrumentation tests on disposable emulator
+        run: |
+          set -Eeuo pipefail
+          avd_name="freekiosk-api-35"
+          echo "no" | avdmanager create avd --force --name "$avd_name" --package "system-images;android-35;google_apis;x86_64"
+          emulator -avd "$avd_name" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect >"$RUNNER_TEMP/emulator.log" 2>&1 &
+          emulator_pid=$!
+          trap 'adb logcat -d > "$RUNNER_TEMP/emulator-logcat.txt" || true; kill "$emulator_pid" 2>/dev/null || true' EXIT
+          adb wait-for-device
+          until adb shell getprop sys.boot_completed | tr -d "\r" | grep -q "^1$"; do sleep 5; done
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+          ./gradlew --no-daemon connectedDebugAndroidTest --stacktrace
+
+      - name: Upload instrumentation reports and emulator logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: instrumentation-api-35
+          path: |
+            app/build/outputs/androidTest-results/
+            app/build/reports/androidTests/
+            ${{ runner.temp }}/emulator.log
+            ${{ runner.temp }}/emulator-logcat.txt
+          if-no-files-found: warn
+
+  compatibility:
+    name: Compatibility API ${{ matrix.api-level }}
+    if: github.event_name == 'schedule'
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [31, 34, 35, 36]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK and emulator image
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools emulator platforms;android-36 build-tools;36.0.0 system-images;android-${{ matrix.api-level }};google_apis;x86_64
+
+      - name: Run compatibility instrumentation tests
+        run: |
+          set -Eeuo pipefail
+          avd_name="freekiosk-api-${{ matrix.api-level }}"
+          echo "no" | avdmanager create avd --force --name "$avd_name" --package "system-images;android-${{ matrix.api-level }};google_apis;x86_64"
+          emulator -avd "$avd_name" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect >"$RUNNER_TEMP/emulator.log" 2>&1 &
+          emulator_pid=$!
+          trap 'adb logcat -d > "$RUNNER_TEMP/emulator-logcat.txt" || true; kill "$emulator_pid" 2>/dev/null || true' EXIT
+          adb wait-for-device
+          until adb shell getprop sys.boot_completed | tr -d "\r" | grep -q "^1$"; do sleep 5; done
+          ./gradlew --no-daemon connectedDebugAndroidTest --stacktrace
+
+      - name: Upload compatibility reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: instrumentation-api-${{ matrix.api-level }}
+          path: |
+            app/build/outputs/androidTest-results/
+            app/build/reports/androidTests/
+            ${{ runner.temp }}/emulator.log
+            ${{ runner.temp }}/emulator-logcat.txt
+          if-no-files-found: warn
+
+  device-owner:
+    name: Optional Device Owner probe
+    if: github.event_name == 'workflow_dispatch' && inputs.device_owner_probe == true
+    needs: gradle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK and emulator image
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools emulator platforms;android-36 build-tools;36.0.0 system-images;android-35;google_apis;x86_64
+
+      - name: Download debug APK
+        uses: actions/download-artifact@v4
+        with:
+          name: FreeKiosk-Lite-debug
+          path: build-artifact
+
+      - name: Provision disposable emulator and run policy probe
+        run: |
+          set -Eeuo pipefail
+          avd_name="freekiosk-device-owner"
+          echo "no" | avdmanager create avd --force --name "$avd_name" --package "system-images;android-35;google_apis;x86_64"
+          emulator -avd "$avd_name" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect >"$RUNNER_TEMP/emulator.log" 2>&1 &
+          emulator_pid=$!
+          trap 'adb logcat -d > "$RUNNER_TEMP/emulator-logcat.txt" || true; kill "$emulator_pid" 2>/dev/null || true' EXIT
+          adb wait-for-device
+          until adb shell getprop sys.boot_completed | tr -d "\r" | grep -q "^1$"; do sleep 5; done
+          adb install build-artifact/app-debug.apk
+          adb shell dpm set-device-owner com.freekiosklite/.admin.KioskDeviceAdminReceiver
+          ./gradlew --no-daemon connectedDebugAndroidTest \
+            -Pandroid.testInstrumentationRunnerArguments.class=com.freekiosklite.kiosk.DevicePolicyInstrumentedTest \
+            --stacktrace
+
+      - name: Upload Device Owner reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-owner-probe
+          path: |
+            app/build/outputs/androidTest-results/
+            app/build/reports/androidTests/
+            ${{ runner.temp }}/emulator.log
+            ${{ runner.temp }}/emulator-logcat.txt
+          if-no-files-found: warn

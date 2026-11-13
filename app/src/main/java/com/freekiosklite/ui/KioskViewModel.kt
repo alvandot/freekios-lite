@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.freekiosklite.data.AppPreferencesRepository
 import com.freekiosklite.data.InstalledApp
 import com.freekiosklite.data.InstalledAppsRepository
+import com.freekiosklite.data.LaunchableAppsProvider
+import com.freekiosklite.data.SelectedPackagesStore
+import com.freekiosklite.security.PinAuthenticator
 import com.freekiosklite.security.PinSecurity
 import com.freekiosklite.security.PinVerification
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,12 +23,16 @@ data class KioskUiState(
     val pin: String = "",
     val message: String? = null,
     val isLoading: Boolean = true,
+    val isPinConfigured: Boolean = false,
+    val isAdminUnlocked: Boolean = false,
 )
 
-class KioskViewModel(application: Application) : AndroidViewModel(application) {
-    private val appPreferences = AppPreferencesRepository(application)
-    private val installedApps = InstalledAppsRepository(application)
-    private val pinSecurity = PinSecurity(application)
+class KioskViewModel(
+    application: Application,
+    private val appPreferences: SelectedPackagesStore = AppPreferencesRepository(application),
+    private val installedApps: LaunchableAppsProvider = InstalledAppsRepository(application),
+    private val pinSecurity: PinAuthenticator = PinSecurity(application),
+) : AndroidViewModel(application) {
     private val _state = MutableStateFlow(KioskUiState())
     val state: StateFlow<KioskUiState> = _state.asStateFlow()
 
@@ -35,6 +42,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             _state.value = KioskUiState(
                 installedApps = installedApps.findLaunchableApps(),
                 selectedPackages = selected,
+                isPinConfigured = pinSecurity.isConfigured(),
                 isLoading = false,
             )
         }
@@ -66,6 +74,8 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             appPreferences.saveSelectedPackages(current.selectedPackages)
             _state.value = _state.value.copy(
                 pin = "",
+                isPinConfigured = true,
+                isAdminUnlocked = true,
                 message = "Configuration saved. Lock Task activation remains explicit.",
             )
         }
@@ -76,4 +86,27 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     suspend fun verifyPin(pin: CharArray): PinVerification = pinSecurity.verifyPin(pin)
+
+    fun unlockAdmin(pin: String) {
+        viewModelScope.launch {
+            when (val result = pinSecurity.verifyPin(pin.toCharArray())) {
+                PinVerification.Success -> {
+                    _state.value = _state.value.copy(isAdminUnlocked = true, message = null)
+                }
+                PinVerification.Failure -> {
+                    _state.value = _state.value.copy(message = "Invalid PIN.")
+                }
+                PinVerification.Locked -> {
+                    _state.value = _state.value.copy(message = "PIN locked temporarily.")
+                }
+                PinVerification.NotConfigured -> {
+                    _state.value = _state.value.copy(message = "Administrator PIN is not configured.")
+                }
+            }
+        }
+    }
+
+    fun lockAdmin() {
+        _state.value = _state.value.copy(isAdminUnlocked = false)
+    }
 }

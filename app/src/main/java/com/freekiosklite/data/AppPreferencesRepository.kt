@@ -9,7 +9,12 @@ import kotlinx.coroutines.flow.map
 
 private val Context.appPreferencesDataStore by preferencesDataStore(name = "kiosk_preferences")
 
-class AppPreferencesRepository(private val context: Context) {
+interface SelectedPackagesStore {
+    val selectedPackages: Flow<Set<String>>
+    suspend fun saveSelectedPackages(packages: Set<String>)
+}
+
+class AppPreferencesRepository(private val context: Context) : SelectedPackagesStore {
     private val selectedPackagesKey = stringSetPreferencesKey("selected_packages")
 
     val selectedPackages: Flow<Set<String>> =

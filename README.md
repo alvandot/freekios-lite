@@ -48,9 +48,35 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ## GitHub Actions
 
 `.github/workflows/android.yml` runs on pushes to `main`, pull requests to
-`main`, and manual dispatch. It uses JDK 17, installs only the required Android
-SDK packages, validates the Gradle wrapper, builds the debug APK, and uploads
-`FreeKiosk-Lite-debug` as a workflow artifact.
+`main`, a weekly compatibility schedule, and manual dispatch. It uses JDK 17,
+installs only the required Android SDK packages, validates the Gradle wrapper,
+runs unit tests, lint, Compose/instrumentation tests on an API 35 headless
+emulator, and uploads test reports plus `FreeKiosk-Lite-debug` as workflow
+artifacts. The scheduled matrix covers API 31, 34, 35, and 36 where the
+corresponding Google APIs images are available.
+
+Run the optional Device Owner probe manually with the `device_owner_probe`
+workflow input. It uses a disposable emulator and fails if provisioning cannot
+be performed; normal builds never activate Device Owner.
+
+## Testing
+
+Local JVM tests:
+
+```bash
+./gradlew testDebugUnitTest
+```
+
+Android emulator tests:
+
+```bash
+./gradlew connectedDebugAndroidTest
+```
+
+The emulator suite covers real Android Keystore/DataStore PIN behavior,
+lockout/recovery, approved package persistence, missing package handling,
+Compose home/admin navigation, and the explicit Device Owner capability probe.
+Authentication and Device Owner tests are not simulated with mocks.
 
 ## Optional Device Owner provisioning
 

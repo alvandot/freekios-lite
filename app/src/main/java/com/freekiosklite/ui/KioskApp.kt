@@ -34,6 +34,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.freekiosklite.data.InstalledApp
+import com.freekiosklite.data.AppLaunchResolver
 import com.freekiosklite.ui.theme.FreeKioskTheme
 
 @Composable
@@ -59,13 +60,23 @@ fun KioskApp(viewModel: KioskViewModel) {
                         )
                     }
                     composable("admin") {
-                        AdminScreen(
-                            state = state,
-                            onBack = { navController.popBackStack() },
-                            onPinChanged = viewModel::setPin,
-                            onTogglePackage = viewModel::togglePackage,
-                            onSave = viewModel::saveConfiguration,
-                        )
+                        if (state.isPinConfigured && !state.isAdminUnlocked) {
+                            AdminAuthScreen(
+                                onBack = { navController.popBackStack() },
+                                onUnlock = viewModel::unlockAdmin,
+                            )
+                        } else {
+                            AdminScreen(
+                                state = state,
+                                onBack = {
+                                    viewModel.lockAdmin()
+                                    navController.popBackStack()
+                                },
+                                onPinChanged = viewModel::setPin,
+                                onTogglePackage = viewModel::togglePackage,
+                                onSave = viewModel::saveConfiguration,
+                            )
+                        }
                     }
                 }
             }
@@ -128,6 +139,38 @@ private fun HomeScreen(
 }
 
 @Composable
+private fun AdminAuthScreen(
+    onBack: () -> Unit,
+    onUnlock: (String) -> Unit,
+) {
+    var pin by androidx.compose.runtime.rememberSaveable { androidx.compose.runtime.mutableStateOf("") }
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Administrator authentication", style = MaterialTheme.typography.headlineSmall)
+            TextButton(onClick = onBack) { Text("Back") }
+        }
+        OutlinedTextField(
+            value = pin,
+            onValueChange = { pin = it.filter(Char::isDigit).take(12) },
+            label = { Text("PIN") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Button(onClick = { onUnlock(pin) }, modifier = Modifier.fillMaxWidth()) {
+            Text("Unlock")
+        }
+    }
+}
+
+@Composable
 private fun AdminScreen(
     state: KioskUiState,
     onBack: () -> Unit,
@@ -178,7 +221,7 @@ private fun AdminScreen(
 }
 
 private fun launchApp(context: Context, packageName: String) {
-    val intent = context.packageManager.getLaunchIntentForPackage(packageName)
+    val intent = AppLaunchResolver(context.packageManager).launchIntent(packageName)
     if (intent == null) {
         Toast.makeText(context, "Application is unavailable.", Toast.LENGTH_SHORT).show()
     } else {

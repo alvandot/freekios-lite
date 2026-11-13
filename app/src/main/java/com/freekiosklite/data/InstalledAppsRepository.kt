@@ -10,7 +10,11 @@ data class InstalledApp(
     val label: String,
 )
 
-class InstalledAppsRepository(private val context: Context) {
+interface LaunchableAppsProvider {
+    fun findLaunchableApps(): List<InstalledApp>
+}
+
+class InstalledAppsRepository(private val context: Context) : LaunchableAppsProvider {
     fun findLaunchableApps(): List<InstalledApp> {
         val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         val activities = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
