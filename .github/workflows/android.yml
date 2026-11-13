@@ -106,7 +106,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           avd_name="freekiosk-api-35"
-          printf 'no\n' | avdmanager create avd --verbose --force --name "$avd_name" --package "system-images;android-35;google_apis;x86_64" --device "pixel_2"
+          printf 'no\n' | avdmanager -v create avd --force --name "$avd_name" --package "system-images;android-35;google_apis;x86_64" --device "pixel_2"
           "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fx "$avd_name"
           "$ANDROID_HOME/emulator/emulator" -avd "$avd_name" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect >"$RUNNER_TEMP/emulator.log" 2>&1 &
           emulator_pid=$!
@@ -161,7 +161,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           avd_name="freekiosk-api-${{ matrix.api-level }}"
-          printf 'no\n' | avdmanager create avd --verbose --force --name "$avd_name" --package "system-images;android-${{ matrix.api-level }};google_apis;x86_64" --device "pixel_2"
+          printf 'no\n' | avdmanager -v create avd --force --name "$avd_name" --package "system-images;android-${{ matrix.api-level }};google_apis;x86_64" --device "pixel_2"
           "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fx "$avd_name"
           "$ANDROID_HOME/emulator/emulator" -avd "$avd_name" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect >"$RUNNER_TEMP/emulator.log" 2>&1 &
           emulator_pid=$!
@@ -216,7 +216,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           avd_name="freekiosk-device-owner"
-          printf 'no\n' | avdmanager create avd --verbose --force --name "$avd_name" --package "system-images;android-35;google_apis;x86_64" --device "pixel_2"
+          printf 'no\n' | avdmanager -v create avd --force --name "$avd_name" --package "system-images;android-35;google_apis;x86_64" --device "pixel_2"
           "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fx "$avd_name"
           "$ANDROID_HOME/emulator/emulator" -avd "$avd_name" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect >"$RUNNER_TEMP/emulator.log" 2>&1 &
           emulator_pid=$!
