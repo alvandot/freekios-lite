@@ -24,6 +24,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -143,7 +145,7 @@ private fun AdminAuthScreen(
     onBack: () -> Unit,
     onUnlock: (String) -> Unit,
 ) {
-    var pin by androidx.compose.runtime.rememberSaveable { androidx.compose.runtime.mutableStateOf("") }
+    var pin by rememberSaveable { mutableStateOf("") }
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),

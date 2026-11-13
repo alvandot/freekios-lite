@@ -15,7 +15,7 @@ interface LaunchableAppsProvider {
 }
 
 class InstalledAppsRepository(private val context: Context) : LaunchableAppsProvider {
-    fun findLaunchableApps(): List<InstalledApp> {
+    override fun findLaunchableApps(): List<InstalledApp> {
         val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         val activities = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.packageManager.queryIntentActivities(

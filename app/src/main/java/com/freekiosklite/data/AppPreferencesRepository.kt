@@ -17,12 +17,12 @@ interface SelectedPackagesStore {
 class AppPreferencesRepository(private val context: Context) : SelectedPackagesStore {
     private val selectedPackagesKey = stringSetPreferencesKey("selected_packages")
 
-    val selectedPackages: Flow<Set<String>> =
+    override val selectedPackages: Flow<Set<String>> =
         context.appPreferencesDataStore.data.map { preferences ->
             preferences[selectedPackagesKey].orEmpty()
         }
 
-    suspend fun saveSelectedPackages(packages: Set<String>) {
+    override suspend fun saveSelectedPackages(packages: Set<String>) {
         context.appPreferencesDataStore.edit { preferences ->
             preferences[selectedPackagesKey] = packages
         }

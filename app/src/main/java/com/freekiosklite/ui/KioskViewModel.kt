@@ -93,7 +93,7 @@ class KioskViewModel(
                 PinVerification.Success -> {
                     _state.value = _state.value.copy(isAdminUnlocked = true, message = null)
                 }
-                PinVerification.Failure -> {
+                is PinVerification.Failure -> {
                     _state.value = _state.value.copy(message = "Invalid PIN.")
                 }
                 PinVerification.Locked -> {
