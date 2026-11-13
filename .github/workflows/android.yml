@@ -83,6 +83,7 @@ jobs:
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     needs: gradle
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Check out source
         uses: actions/checkout@v5
@@ -103,7 +104,7 @@ jobs:
           set -Eeuo pipefail
           avd_name="freekiosk-api-35"
           echo "no" | avdmanager create avd --force --name "$avd_name" --package "system-images;android-35;google_apis;x86_64"
-          emulator -avd "$avd_name" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect >"$RUNNER_TEMP/emulator.log" 2>&1 &
+          "$ANDROID_HOME/emulator/emulator" -avd "$avd_name" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect >"$RUNNER_TEMP/emulator.log" 2>&1 &
           emulator_pid=$!
           trap 'adb logcat -d > "$RUNNER_TEMP/emulator-logcat.txt" || true; kill "$emulator_pid" 2>/dev/null || true' EXIT
           adb wait-for-device
@@ -133,6 +134,7 @@ jobs:
       matrix:
         api-level: [31, 34, 35, 36]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Check out source
         uses: actions/checkout@v5
@@ -153,7 +155,7 @@ jobs:
           set -Eeuo pipefail
           avd_name="freekiosk-api-${{ matrix.api-level }}"
           echo "no" | avdmanager create avd --force --name "$avd_name" --package "system-images;android-${{ matrix.api-level }};google_apis;x86_64"
-          emulator -avd "$avd_name" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect >"$RUNNER_TEMP/emulator.log" 2>&1 &
+          "$ANDROID_HOME/emulator/emulator" -avd "$avd_name" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect >"$RUNNER_TEMP/emulator.log" 2>&1 &
           emulator_pid=$!
           trap 'adb logcat -d > "$RUNNER_TEMP/emulator-logcat.txt" || true; kill "$emulator_pid" 2>/dev/null || true' EXIT
           adb wait-for-device
@@ -177,6 +179,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.device_owner_probe == true
     needs: gradle
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Check out source
         uses: actions/checkout@v5
@@ -203,7 +206,7 @@ jobs:
           set -Eeuo pipefail
           avd_name="freekiosk-device-owner"
           echo "no" | avdmanager create avd --force --name "$avd_name" --package "system-images;android-35;google_apis;x86_64"
-          emulator -avd "$avd_name" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect >"$RUNNER_TEMP/emulator.log" 2>&1 &
+          "$ANDROID_HOME/emulator/emulator" -avd "$avd_name" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect >"$RUNNER_TEMP/emulator.log" 2>&1 &
           emulator_pid=$!
           trap 'adb logcat -d > "$RUNNER_TEMP/emulator-logcat.txt" || true; kill "$emulator_pid" 2>/dev/null || true' EXIT
           adb wait-for-device
