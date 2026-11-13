@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - main
-      - chore/project-foundation
   pull_request:
     branches:
       - main
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -17,12 +19,6 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v5
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: npm
 
       - name: Set up Java
         uses: actions/setup-java@v5
@@ -33,23 +29,16 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: platform-tools platforms;android-36 build-tools;36.0.0 ndk;27.1.12297006
+          packages: platform-tools platforms;android-36 build-tools;36.0.0
 
-      - name: Install JavaScript dependencies
-        run: npm ci
-
-      - name: Run checks
-        run: |
-          npm test -- --runInBand
-          npm run lint
-          npx tsc --noEmit
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
 
       - name: Build debug APK
-        working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew --no-daemon clean assembleDebug
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: FreeKiosk-Lite-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
