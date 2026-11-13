@@ -103,20 +103,16 @@ jobs:
         run: sdkmanager "system-images;android-35;google_apis;x86_64"
 
       - name: Run instrumentation tests on disposable emulator
-        run: |
-          set -Eeuo pipefail
-          avd_name="freekiosk-api-35"
-          printf 'no\n' | avdmanager create avd --force --name "$avd_name" --package "system-images;android-35;google_apis;x86_64" --device "pixel"
-          "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fx "$avd_name"
-          "$ANDROID_HOME/emulator/emulator" -avd "$avd_name" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect >"$RUNNER_TEMP/emulator.log" 2>&1 &
-          emulator_pid=$!
-          trap 'adb logcat -d > "$RUNNER_TEMP/emulator-logcat.txt" || true; kill "$emulator_pid" 2>/dev/null || true' EXIT
-          adb wait-for-device
-          until adb shell getprop sys.boot_completed | tr -d "\r" | grep -q "^1$"; do sleep 5; done
-          adb shell settings put global window_animation_scale 0
-          adb shell settings put global transition_animation_scale 0
-          adb shell settings put global animator_duration_scale 0
-          ./gradlew --no-daemon connectedDebugAndroidTest --stacktrace
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          force-avd-creation: true
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
+          disable-animations: true
+          script: ./gradlew --no-daemon connectedDebugAndroidTest --stacktrace
 
       - name: Upload instrumentation reports and emulator logs
         if: always()
