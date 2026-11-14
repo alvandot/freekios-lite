@@ -112,7 +112,9 @@ jobs:
           force-avd-creation: true
           emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
           disable-animations: true
-          script: ./gradlew --no-daemon connectedDebugAndroidTest --stacktrace
+          script: |
+            trap 'adb logcat -d > "$RUNNER_TEMP/emulator-logcat.txt" || true' EXIT
+            ./gradlew --no-daemon connectedDebugAndroidTest --stacktrace
 
       - name: Upload instrumentation reports and emulator logs
         if: always()
