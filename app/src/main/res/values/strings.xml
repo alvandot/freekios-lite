@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">FreeKiosk Lite</string>
+    <string name="device_admin_description">Optional FreeKiosk Lite administration controls</string>
+</resources>
