@@ -110,7 +110,7 @@ jobs:
           arch: x86_64
           profile: pixel_2
           force-avd-creation: true
-          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 4096 -cores 2
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
           disable-animations: true
           script: |
             trap 'adb logcat -d > "$RUNNER_TEMP/emulator-logcat.txt" || true' EXIT
